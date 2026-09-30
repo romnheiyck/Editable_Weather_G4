@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive English Classroom Game Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/umd/lucide.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes bounce-scale {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        .animate-bounce-scale { animation: bounce-scale 0.6s ease-in-out infinite; }
+        @keyframes float-up {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-50px) scale(1.3); }
+        }
+        .animate-float-up { animation: float-up 1s ease-out forwards; }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.9); }
+        }
+        .active-group-glow { animation: pulse-glow 2s infinite; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col select-none">
+
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-wrap justify-between items-center shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 p-2.5 rounded-2xl shadow-md flex items-center justify-center">
+                <i data-lucide="gamepad-2" class="w-7 h-7 text-white">🎮</i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">LinguaGrid Pro</h1>
+                <p class="text-xs text-slate-400 font-medium">Interactive Classroom English Game Engine</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3 mt-3 sm:mt-0">
+            <button id="btn-presets" class="flex items-center space-x-2 bg-slate-700 hover:bg-slate-600 px-4 py-2.5 rounded-xl text-sm font-semibold transition border border-slate-600 shadow-sm">
+                <i data-lucide="bookmark" class="w-4 h-4 text-cyan-400">🔖</i>
+                <span>Presets</span>
+            </button>
+            <button id="btn-settings" class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 rounded-xl text-sm font-bold transition shadow-lg shadow-indigo-600/30">
+                <i data-lucide="settings" class="w-4 h-4">⚙️</i>
+                <span>Teacher Settings</span>
+            </button>
+            <button id="btn-fullscreen" class="bg-slate-700 hover:bg-slate-600 p-2.5 rounded-xl transition border border-slate-600" title="Toggle Fullscreen">
+                <i data-lucide="maximize" class="w-5 h-5 text-slate-300">⛶</i>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-[1700px] w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Left Panel: Speaking Prompt & Groups / Scoreboard -->
+        <section class="lg:col-span-4 flex flex-col space-y-6">
+            
+            <!-- Speaking Prompt Box -->
+            <div id="prompt-container" class="bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-800 border-2 border-indigo-500/50 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center space-x-1.5 bg-indigo-500/20 px-3 py-1 rounded-full">
+                        <i data-lucide="mic" class="w-3.5 h-3.5">🎤</i>
+                        <span>Speaking Prompt</span>
+                    </span>
+                    <span id="display-instruction" class="text-xs text-slate-400 italic">Say the sentence, then choose a box.</span>
+                </div>
+                <div class="space-y-2">
+                    <h2 id="display-question" class="text-2xl font-black text-white tracking-tight">How's the weather?</h2>
+                    <div class="text-3xl font-extrabold text-cyan-400 bg-slate-900/80 px-4 py-3 rounded-2xl border border-indigo-500/30 flex items-center space-x-2">
+                        <span id="answer-prefix">It's</span>
+                        <span id="display-active-word" class="underline decoration-wavy decoration-cyan-400/60 uppercase">rainy</span>.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Group & Timer Control Bar -->
+            <div class="bg-slate-800 border border-slate-700 rounded-3xl p-5 shadow-xl flex flex-col space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Current Turn</span>
+                        <div id="active-group-badge" class="flex items-center space-x-2 mt-1">
+                            <span class="w-4 h-4 rounded-full bg-blue-500 inline-block shadow-md"></span>
+                            <span id="active-group-name" class="text-xl font-black text-white">GROUP 1: RAINY</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Timer</span>
+                        <div class="text-3xl font-black font-mono text-amber-400 flex items-center justify-end space-x-1">
+                            <i data-lucide="timer" class="w-6 h-6 animate-pulse">⏱️</i>
+                            <span id="timer-display">10s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timer Controls -->
+                <div class="grid grid-cols-4 gap-2 pt-1 border-t border-slate-700/60">
+                    <button id="timer-start" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center space-x-1 transition shadow-md">
+                        <i data-lucide="play" class="w-3.5 h-3.5">▶</i><span>Start</span>
+                    </button>
+                    <button id="timer-pause" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center space-x-1 transition shadow-md">
+                        <i data-lucide="pause" class="w-3.5 h-3.5">⏸</i><span>Pause</span>
+                    </button>
+                    <button id="timer-resume" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center space-x-1 transition shadow-md">
+                        <i data-lucide="play-circle" class="w-3.5 h-3.5">🔄</i><span>Resume</span>
+                    </button>
+                    <button id="timer-reset" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center space-x-1 transition border border-slate-600">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5">↺</i><span>Reset</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Groups & Scoreboard Panel -->
+            <div class="bg-slate-800 border border-slate-700 rounded-3xl p-5 shadow-xl flex flex-col space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-extrabold text-slate-200 flex items-center space-x-2">
+                        <i data-lucide="trophy" class="w-5 h-5 text-amber-400">🏆</i>
+                        <span>Teams & Scoreboard</span>
+                    </h3>
+                    <span class="text-xs bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full font-medium">Connect 3 to Score</span>
+                </div>
+
+                <div id="groups-scoreboard-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Quick Game Controls -->
+            <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-wrap gap-2 justify-between">
+                <button id="quick-reset-board" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition">
+                    <i data-lucide="grid" class="w-3.5 h-3.5">⏹️</i><span>Clear Board</span>
+                </button>
+                <button id="quick-reset-scores" class="bg-slate-700 hover:bg-slate-600 text-slate-300 px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition">
+                    <i data-lucide="award" class="w-3.5 h-3.5">🎖️</i><span>Reset Scores</span>
+                </button>
+                <button id="quick-new-game" class="bg-rose-600/80 hover:bg-rose-600 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5">🔄</i><span>New Game</span>
+                </button>
+            </div>
+
+        </section>
+
+        <!-- Right Panel: Main Sudoku Grid & Game Board -->
+        <section class="lg:col-span-8 flex flex-col items-center bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-2xl min-h-[650px] justify-between relative overflow-hidden">
+            
+            <!-- Floating Notification Overlay -->
+            <div id="notification-banner" class="absolute top-6 z-30 pointer-events-none transform -translate-y-20 opacity-0 transition-all duration-300">
+                <div id="notification-content" class="bg-emerald-600 text-white font-black px-6 py-3 rounded-2xl shadow-2xl text-xl flex items-center space-x-3 border-2 border-emerald-400">
+                    <i data-lucide="sparkles" class="w-6 h-6 animate-spin">✨</i>
+                    <span id="notification-text">+1 POINT! CONNECTED LINE!</span>
+                </div>
+            </div>
+
+            <!-- Board Header Info -->
+            <div class="w-full flex items-center justify-between mb-4 pb-3 border-b border-slate-700/60">
+                <div class="flex items-center space-x-2">
+                    <span id="board-grid-label" class="text-sm font-bold text-slate-300">Grid: 9 × 9</span>
+                    <span class="text-slate-500">•</span>
+                    <span id="board-status-label" class="text-sm text-slate-400">Click an empty cell to place your group's word</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <span id="scoring-rules-indicator" class="text-xs bg-indigo-950 text-indigo-300 border border-indigo-800 px-3 py-1 rounded-xl font-medium">
+                        H: ON | V: ON | D: OFF
+                    </span>
+                </div>
+            </div>
+
+            <!-- The Grid Container -->
+            <div id="game-board-wrapper" class="w-full flex-1 flex items-center justify-center p-2 overflow-auto">
+                <div id="sudoku-grid" class="grid gap-2 p-3 bg-slate-900 rounded-2xl border-2 border-slate-700 shadow-inner max-w-full max-h-[70vh]">
+                    <!-- Generated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- Board Footer Helper -->
+            <div class="w-full mt-4 pt-3 border-t border-slate-700/60 flex flex-wrap justify-between items-center text-xs text-slate-400">
+                <div class="flex items-center space-x-4">
+                    <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-md bg-slate-700 border border-slate-600"></span><span>Empty Box</span></span>
+                    <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-md bg-blue-600/30 border border-blue-500"></span><span>Occupied Cell</span></span>
+                    <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-md bg-amber-500 border border-amber-300 animate-pulse"></span><span>Scored Line (3 in-a-row)</span></span>
+                </div>
+                <div>
+                    <span id="total-filled-counter">0 / 81 Filled</span>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    
+    <!-- Settings & Teacher Control Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <!-- Modal Header -->
+            <div class="bg-slate-900 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-indigo-600 p-2 rounded-xl text-white">
+                        <i data-lucide="settings" class="w-5 h-5">⚙️</i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Teacher Control & Settings Panel</h2>
+                        <p class="text-xs text-slate-400">Customize groups, vocabulary, grid size, timer, and scoring rules</p>
+                    </div>
+                </div>
+                <button id="btn-close-settings" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-700 transition">
+                    <i data-lucide="x" class="w-6 h-6">✕</i>
+                </button>
+            </div>
+
+            <!-- Modal Tabs -->
+            <div class="flex border-b border-slate-700 bg-slate-900/50 px-6 overflow-x-auto space-x-2">
+                <button data-tab="tab-groups" class="tab-btn py-3 px-4 text-sm font-bold border-b-2 border-indigo-500 text-indigo-400 transition whitespace-nowrap">Groups & Words</button>
+                <button data-tab="tab-board" class="tab-btn py-3 px-4 text-sm font-medium text-slate-400 hover:text-white border-b-2 border-transparent transition whitespace-nowrap">Board & Scoring</button>
+                <button data-tab="tab-prompt" class="tab-btn py-3 px-4 text-sm font-medium text-slate-400 hover:text-white border-b-2 border-transparent transition whitespace-nowrap">Prompts & Sentences</button>
+                <button data-tab="tab-timer" class="tab-btn py-3 px-4 text-sm font-medium text-slate-400 hover:text-white border-b-2 border-transparent transition whitespace-nowrap">Timer & Turns</button>
+                <button data-tab="tab-library" class="tab-btn py-3 px-4 text-sm font-medium text-slate-400 hover:text-white border-b-2 border-transparent transition whitespace-nowrap">Image Library</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto flex-1 space-y-6">
+                
+                <!-- TAB 1: GROUPS & WORDS -->
+                <div id="tab-groups" class="tab-content space-y-6">
+                    <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-700">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-200">Number of Active Groups / Teams</label>
+                            <p class="text-xs text-slate-400">Choose between 2 to 6 competing groups.</p>
+                        </div>
+                        <select id="setting-num-groups" class="bg-slate-800 border border-slate-600 rounded-xl px-4 py-2 text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="2">2 Groups</option>
+                            <option value="3">3 Groups</option>
+                            <option value="4" selected>4 Groups</option>
+                            <option value="5">5 Groups</option>
+                            <option value="6">6 Groups</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-4">
+                        <h3 class="text-sm font-bold text-indigo-400 uppercase tracking-wider">Group Details & Assets</h3>
+                        <div id="group-settings-list" class="space-y-4">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: BOARD & SCORING -->
+                <div id="tab-board" class="tab-content space-y-6 hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700 space-y-3">
+                            <label class="block text-sm font-bold text-slate-200">Grid Size Preset</label>
+                            <p class="text-xs text-slate-400">Choose the Sudoku grid dimensions (3x3 up to 10x10).</p>
+                            <select id="setting-grid-size" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <option value="3">3 × 3 (Quick Game)</option>
+                                <option value="4">4 × 4</option>
+                                <option value="5">5 × 5</option>
+                                <option value="6">6 × 6</option>
+                                <option value="7">7 × 7</option>
+                                <option value="8">8 × 8</option>
+                                <option value="9" selected>9 × 9 (Standard Sudoku)</option>
+                                <option value="10">10 × 10</option>
+                            </select>
+                        </div>
+
+                        <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700 space-y-3">
+                            <label class="block text-sm font-bold text-slate-200">Points Per Connected Line (3-in-a-row)</label>
+                            <p class="text-xs text-slate-400">Points awarded when a line is formed.</p>
+                            <select id="setting-points-per-line" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <option value="1" selected>1 Point</option>
+                                <option value="2">2 Points</option>
+                                <option value="3">3 Points</option>
+                                <option value="5">5 Points</option>
+                                <option value="10">10 Points</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700 space-y-4">
+                        <h3 class="text-sm font-bold text-indigo-400 uppercase tracking-wider">Line Scoring Directions</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <label class="flex items-center space-x-3 bg-slate-800 p-3.5 rounded-xl border border-slate-700 cursor-pointer hover:border-indigo-500 transition">
+                                <input type="checkbox" id="setting-score-horizontal" checked class="w-5 h-5 rounded text-indigo-600 bg-slate-900 border-slate-600 focus:ring-indigo-500">
+                                <span class="text-sm font-semibold text-slate-200">Horizontal (Row)</span>
+                            </label>
+                            <label class="flex items-center space-x-3 bg-slate-800 p-3.5 rounded-xl border border-slate-700 cursor-pointer hover:border-indigo-500 transition">
+                                <input type="checkbox" id="setting-score-vertical" checked class="w-5 h-5 rounded text-indigo-600 bg-slate-900 border-slate-600 focus:ring-indigo-500">
+                                <span class="text-sm font-semibold text-slate-200">Vertical (Column)</span>
+                            </label>
+                            <label class="flex items-center space-x-3 bg-slate-800 p-3.5 rounded-xl border border-slate-700 cursor-pointer hover:border-indigo-500 transition">
+                                <input type="checkbox" id="setting-score-diagonal" class="w-5 h-5 rounded text-indigo-600 bg-slate-900 border-slate-600 focus:ring-indigo-500">
+                                <span class="text-sm font-semibold text-slate-200">Diagonal</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700 space-y-4">
+                        <h3 class="text-sm font-bold text-indigo-400 uppercase tracking-wider">Display & Visual Settings</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <label class="flex items-center space-x-3 bg-slate-800 p-3.5 rounded-xl border border-slate-700 cursor-pointer">
+                                <input type="checkbox" id="setting-global-image-display" checked class="w-5 h-5 rounded text-indigo-600 bg-slate-900 border-slate-600">
+                                <span class="text-sm font-semibold text-slate-200">Show Images in Grid & Panels</span>
+                            </label>
+                            <label class="flex items-center space-x-3 bg-slate-800 p-3.5 rounded-xl border border-slate-700 cursor-pointer">
+                                <input type="checkbox" id="setting-global-word-display" checked class="w-5 h-5 rounded text-indigo-600 bg-slate-900 border-slate-600">
+                                <span class="text-sm font-semibold text-slate-200">Show Words in Grid & Panels</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: PROMPTS & SENTENCES -->
+                <div id="tab-prompt" class="tab-content space-y-6 hidden">
+                    <div class="space-y-4 bg-slate-900/60 p-5 rounded-2xl border border-slate-700">
+                        <h3 class="text-sm font-bold text-indigo-400 uppercase tracking-wider">Interactive Speaking Prompt Configuration</h3>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Question / Prompt Header</label>
+                            <input type="text" id="setting-question" value="How's the weather?" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <p class="text-xs text-slate-400 mt-1">Example: "How's the weather?", "What's this?", "What color is it?"</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Answer Prefix</label>
+                            <input type="text" id="setting-answer-prefix" value="It's" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <p class="text-xs text-slate-400 mt-1">Followed automatically by the active group's word.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Instruction Subtitle</label>
+                            <input type="text" id="setting-instruction" value="Say the sentence, then choose a box." class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: TIMER & TURNS -->
+                <div id="tab-timer" class="tab-content space-y-6 hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700 space-y-3">
+                            <label class="block text-sm font-bold text-slate-200">Turn Time Duration</label>
+                            <p class="text-xs text-slate-400">Seconds allowed per turn before Time's Up.</p>
+                            <select id="setting-timer-duration" class="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <option value="5">5 Seconds</option>
+                                <option value="10" selected>10 Seconds</option>
+                                <option value="15">15 Seconds</option>
+                                <option value="20">20 Seconds</option>
+                                <option value="30">30 Seconds</option>
+                                <option value="60">60 Seconds</option>
+                            </select>
+                        </div>
+
+                        <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700 space-y-3">
+                            <label class="block text-sm font-bold text-slate-200">Turn Switching Behavior</label>
+                            <p class="text-xs text-slate-400">Automatic rotation when a box is placed or timer ends.</p>
+                            <label class="flex items-center space-x-3 bg-slate-800 p-3.5 rounded-xl border border-slate-700 cursor-pointer mt-2">
+                                <input type="checkbox" id="setting-auto-turn-switch" checked class="w-5 h-5 rounded text-indigo-600 bg-slate-900 border-slate-600">
+                                <span class="text-sm font-semibold text-slate-200">Automatic Turn Switching ON</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: IMAGE LIBRARY -->
+                <div id="tab-library" class="tab-content space-y-6 hidden">
+                    <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-700 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-bold text-indigo-400 uppercase tracking-wider">Reusable Image Library</h3>
+                                <p class="text-xs text-slate-400">Upload and manage image assets for quick assignment across lessons.</p>
+                            </div>
+                            <label class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition shadow-md flex items-center space-x-2">
+                                <i data-lucide="upload" class="w-4 h-4">📤</i>
+                                <span>Upload New Image</span>
+                                <input type="file" id="library-file-input" accept="image/jpeg,image/png,image/webp" class="hidden">
+                            </label>
+                        </div>
+
+                        <div id="image-library-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-900 px-6 py-4 border-t border-slate-700 flex justify-between items-center">
+                <button id="btn-reset-everything" class="text-rose-400 hover:text-rose-300 text-xs font-bold px-4 py-2 rounded-xl hover:bg-slate-800 transition">
+                    Reset All Data
+                </button>
+                <div class="flex space-x-3">
+                    <button id="btn-cancel-settings" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold px-5 py-2.5 rounded-xl text-sm transition">
+                        Cancel
+                    </button>
+                    <button id="btn-save-settings" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl text-sm transition shadow-lg shadow-indigo-600/30">
+                        Apply Settings
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Presets Modal -->
+    <div id="presets-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="bg-slate-900 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-cyan-600 p-2 rounded-xl text-white">
+                        <i data-lucide="bookmark" class="w-5 h-5">🔖</i>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Lesson Presets Manager</h2>
+                        <p class="text-xs text-slate-400">Load pre-configured English vocabulary lessons instantly</p>
+                    </div>
+                </div>
+                <button id="btn-close-presets" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-700 transition">
+                    <i data-lucide="x" class="w-6 h-6">✕</i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="presets-grid-container">
+                    <!-- Populated dynamically -->
+                </div>
+                <div class="pt-4 border-t border-slate-700/60 flex justify-between items-center">
+                    <button id="btn-save-current-preset" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition shadow-md flex items-center space-x-2">
+                        <i data-lucide="save" class="w-4 h-4">💾</i>
+                        <span>Save Current as New Preset</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_PRESETS = [
+            {
+                id: 'weather',
+                name: '🌤️ Weather Lesson',
+                question: "How's the weather?",
+                answerPrefix: "It's",
+                instruction: "Say the sentence, then choose a box.",
+                groups: [
+                    { name: "Group 1", word: "Rainy", image: "https://placehold.co/150x150/3b82f6/ffffff?text=Rainy", color: "#3b82f6" },
+                    { name: "Group 2", word: "Cloudy", image: "https://placehold.co/150x150/64748b/ffffff?text=Cloudy", color: "#64748b" },
+                    { name: "Group 3", word: "Windy", image: "https://placehold.co/150x150/0ea5e9/ffffff?text=Windy", color: "#0ea5e9" },
+                    { name: "Group 4", word: "Sunny", image: "https://placehold.co/150x150/f59e0b/ffffff?text=Sunny", color: "#f59e0b" }
+                ],
+                gridSize: 9,
+                pointsPerLine: 1,
+                timerDuration: 10
+            },
+            {
+                id: 'animals',
+                name: '🦁 Animals Lesson',
+                question: "What animal is this?",
+                answerPrefix: "It's a",
+                instruction: "Name the animal, then choose a box.",
+                groups: [
+                    { name: "Group 1", word: "Lion", image: "https://placehold.co/150x150/d97706/ffffff?text=Lion", color: "#d97706" },
+                    { name: "Group 2", word: "Monkey", image: "https://placehold.co/150x150/854d0e/ffffff?text=Monkey", color: "#854d0e" },
+                    { name: "Group 3", word: "Zebra", image: "https://placehold.co/150x150/475569/ffffff?text=Zebra", color: "#475569" },
+                    { name: "Group 4", word: "Elephant", image: "https://placehold.co/150x150/64748b/ffffff?text=Elephant", color: "#64748b" }
+                ],
+                gridSize: 6,
+                pointsPerLine: 1,
+                timerDuration: 10
+            },
+            {
+                id: 'food',
+                name: '🍎 Fruits & Food',
+                question: "What do you like?",
+                answerPrefix: "I like",
+                instruction: "Say the food, then choose a box.",
+                groups: [
+                    { name: "Group 1", word: "Apple", image: "https://placehold.co/150x150/dc2626/ffffff?text=Apple", color: "#dc2626" },
+                    { name: "Group 2", word: "Banana", image: "https://placehold.co/150x150/eab308/ffffff?text=Banana", color: "#eab308" },
+                    { name: "Group 3", word: "Orange", image: "https://placehold.co/150x150/f97316/ffffff?text=Orange", color: "#f97316" },
+                    { name: "Group 4", word: "Grape", image: "https://placehold.co/150x150/9333ea/ffffff?text=Grape", color: "#9333ea" }
+                ],
+                gridSize: 6,
+                pointsPerLine: 1,
+                timerDuration: 10
+            },
+            {
+                id: 'colors',
+                name: '🎨 Colors Lesson',
+                question: "What color is it?",
+                answerPrefix: "It's",
+                instruction: "Say the color, then choose a box.",
+                groups: [
+                    { name: "Group 1", word: "Red", image: "https://placehold.co/150x150/ef4444/ffffff?text=Red", color: "#ef4444" },
+                    { name: "Group 2", word: "Blue", image: "https://placehold.co/150x150/3b82f6/ffffff?text=Blue", color: "#3b82f6" },
+                    { name: "Group 3", word: "Green", image: "https://placehold.co/150x150/22c55e/ffffff?text=Green", color: "#22c55e" },
+                    { name: "Group 4", word: "Yellow", image: "https://placehold.co/150x150/eab308/ffffff?text=Yellow", color: "#eab308" }
+                ],
+                gridSize: 6,
+                pointsPerLine: 1,
+                timerDuration: 10
+            }
+        ];
+
+        let gameState = {
+            numGroups: 4,
+            gridSize: 9,
+            question: "How's the weather?",
+            answerPrefix: "It's",
+            instruction: "Say the sentence, then choose a box.",
+            timerDuration: 10,
+            autoTurnSwitch: true,
+            pointsPerLine: 1,
+            scoreHorizontal: true,
+            scoreVertical: true,
+            scoreDiagonal: false,
+            showImages: true,
+            showWords: true,
+            activeGroupIndex: 0,
+            groups: [
+                { name: "Group 1", word: "Rainy", image: "https://placehold.co/150x150/3b82f6/ffffff?text=Rainy", color: "#3b82f6", score: 0 },
+                { name: "Group 2", word: "Cloudy", image: "https://placehold.co/150x150/64748b/ffffff?text=Cloudy", color: "#64748b", score: 0 },
+                { name: "Group 3", word: "Windy", image: "https://placehold.co/150x150/0ea5e9/ffffff?text=Windy", color: "#0ea5e9", score: 0 },
+                { name: "Group 4", word: "Sunny", image: "https://placehold.co/150x150/f59e0b/ffffff?text=Sunny", color: "#f59e0b", score: 0 }
+            ],
+            board: [], // 2D array: null or { groupIndex, word, image }
+            scoredLines: [], // string identifiers for lines already rewarded
+            imageLibrary: [
+                "https://placehold.co/150x150/3b82f6/ffffff?text=Rainy",
+                "https://placehold.co/150x150/64748b/ffffff?text=Cloudy",
+                "https://placehold.co/150x150/0ea5e9/ffffff?text=Windy",
+                "https://placehold.co/150x150/f59e0b/ffffff?text=Sunny",
+                "https://placehold.co/150x150/dc2626/ffffff?text=Apple",
+                "https://placehold.co/150x150/eab308/ffffff?text=Banana",
+                "https://placehold.co/150x150/d97706/ffffff?text=Lion",
+                "https://placehold.co/150x150/22c55e/ffffff?text=Green"
+            ]
+        };
+
+        let timerInterval = null;
+        let currentTime = 10;
+        let timerRunning = false;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'success') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                } else if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, now);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'timeout') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.setValueAtTime(150, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                }
+            } catch (e) {
+                console.log("Audio not enabled yet", e);
+            }
+        }
+
+        function initBoard() {
+            gameState.board = Array(gameState.gridSize).fill(null).map(() => Array(gameState.gridSize).fill(null));
+            gameState.scoredLines = [];
+        }
+
+        function renderApp() {
+            renderSpeakingPrompt();
+            renderActiveGroupDisplay();
+            renderScoreboard();
+            renderGrid();
+            renderSettingsModalGroups();
+            renderImageLibrary();
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                try {
+                    lucide.createIcons();
+                } catch (e) {
+                    console.log("Lucide icons init error", e);
+                }
+            }
+        }
+
+        function renderSpeakingPrompt() {
+            document.getElementById('display-question').innerText = gameState.question;
+            document.getElementById('answer-prefix').innerText = gameState.answerPrefix;
+            document.getElementById('display-instruction').innerText = gameState.instruction;
+            const activeGrp = gameState.groups[gameState.activeGroupIndex] || gameState.groups[0];
+            document.getElementById('display-active-word').innerText = activeGrp ? activeGrp.word : '';
+        }
+
+        function renderActiveGroupDisplay() {
+            const activeGrp = gameState.groups[gameState.activeGroupIndex] || gameState.groups[0];
+            const badge = document.getElementById('active-group-badge');
+            badge.innerHTML = `
+                <span class="w-4 h-4 rounded-full inline-block shadow-md" style="background-color: ${activeGrp.color}"></span>
+                <span class="text-xl font-black text-white">${activeGrp.name.toUpperCase()}: ${activeGrp.word.toUpperCase()}</span>
+            `;
+        }
+
+        function renderScoreboard() {
+            const container = document.getElementById('groups-scoreboard-container');
+            container.innerHTML = '';
+            gameState.groups.forEach((grp, idx) => {
+                const isActive = idx === gameState.activeGroupIndex;
+                const card = document.createElement('div');
+                card.className = `p-3.5 rounded-2xl border transition flex items-center justify-between ${isActive ? 'bg-slate-900 border-indigo-500 shadow-lg active-group-glow' : 'bg-slate-900/40 border-slate-700/80'}`;
+                
+                let imgHtml = (gameState.showImages && grp.image) ? `<img src="${grp.image}" class="w-9 h-9 rounded-xl object-cover border border-slate-600 shadow-sm" onerror="this.src='https://placehold.co/100x100/334155/ffffff?text=Img'">` : '';
+                let wordHtml = gameState.showWords ? `<span class="text-xs font-bold text-slate-300 uppercase">${grp.word}</span>` : '';
+
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="w-3.5 h-3.5 rounded-full shrink-0" style="background-color: ${grp.color}"></span>
+                        ${imgHtml}
+                        <div>
+                            <h4 class="text-sm font-extrabold text-white">${grp.name}</h4>
+                            ${wordHtml}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-2xl font-black text-cyan-400 font-mono">${grp.score}</span>
+                        <span class="text-[10px] block text-slate-400 uppercase font-bold">Points</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('sudoku-grid');
+            const size = gameState.gridSize;
+            grid.style.gridTemplateColumns = `repeat(${size}, minmax(0, 1fr))`;
+            grid.innerHTML = '';
+
+            let filledCount = 0;
+
+            for (let r = 0; r < size; r++) {
+                for (let c = 0; c < size; c++) {
+                    const cellData = gameState.board[r][c];
+                    const cell = document.createElement('button');
+                    
+                    let baseClasses = "aspect-square rounded-xl border flex flex-col items-center justify-center p-1 transition-all duration-200 relative overflow-hidden ";
+                    
+                    if (cellData) {
+                        filledCount++;
+                        const grp = gameState.groups[cellData.groupIndex];
+                        const isScored = isCellInScoredLine(r, c);
+                        if (isScored) {
+                            baseClasses += "bg-amber-500/20 border-amber-400 shadow-lg animate-pulse";
+                        } else {
+                            baseClasses += "bg-slate-800/90 border-blue-500/60 shadow-md hover:bg-slate-800";
+                        }
+                    } else {
+                        baseClasses += "bg-slate-900/80 border-slate-700/80 hover:border-indigo-500 hover:bg-slate-800/60 cursor-pointer shadow-inner";
+                    }
+
+                    cell.className = baseClasses;
+                    cell.dataset.row = r;
+                    cell.dataset.col = c;
+
+                    if (cellData) {
+                        const grp = gameState.groups[cellData.groupIndex];
+                        let innerHtml = '';
+                        if (gameState.showImages && cellData.image) {
+                            innerHtml += `<img src="${cellData.image}" class="w-3/5 h-3/5 object-contain rounded-lg mb-0.5" onerror="this.src='https://placehold.co/100x100/334155/ffffff?text=Img'">`;
+                        }
+                        if (gameState.showWords) {
+                            innerHtml += `<span class="text-[10px] sm:text-xs font-black uppercase tracking-tight text-white px-1 truncate max-w-full" style="color: ${grp ? grp.color : '#fff'}">${cellData.word}</span>`;
+                        }
+                        cell.innerHTML = innerHtml;
+                    } else {
+                        cell.innerHTML = `<span class="text-[9px] text-slate-600 font-mono">${r+1},${c+1}</span>`;
+                        cell.onclick = () => handleCellClick(r, c);
+                    }
+
+                    grid.appendChild(cell);
+                }
+            }
+
+            document.getElementById('total-filled-counter').innerText = `${filledCount} / ${size * size} Filled`;
+            document.getElementById('board-grid-label').innerText = `Grid: ${size} × ${size}`;
+            document.getElementById('scoring-rules-indicator').innerText = `H: ${gameState.scoreHorizontal?'ON':'OFF'} | V: ${gameState.scoreVertical?'ON':'OFF'} | D: ${gameState.scoreDiagonal?'ON':'OFF'}`;
+        }
+
+        function isCellInScoredLine(r, c) {
+            return gameState.scoredLines.some(lineKey => {
+                // lineKey format: "h-r-startc" or "v-c-startr" or "d1-r-c"
+                const parts = lineKey.split('-');
+                const type = parts[0];
+                if (type === 'h') {
+                    const lineR = parseInt(parts[1]);
+                    const startC = parseInt(parts[2]);
+                    return r === lineR && c >= startC && c < startC + 3;
+                } else if (type === 'v') {
+                    const lineC = parseInt(parts[1]);
+                    const startR = parseInt(parts[2]);
+                    return c === lineC && r >= startR && r < startR + 3;
+                } else if (type === 'd') {
+                    const dir = parts[1]; // 'dl' or 'dr'
+                    const startR = parseInt(parts[2]);
+                    const startC = parseInt(parts[3]);
+                    if (dir === 'dr') {
+                        return (r - startR === c - startC) && (r >= startR && r < startR + 3);
+                    } else {
+                        return (r - startR === startC - c) && (r >= startR && r < startR + 3);
+                    }
+                }
+                return false;
+            });
+        }
+
+        function handleCellClick(r, c) {
+            if (gameState.board[r][c] !== null) return; // already occupied
+
+            const activeGrp = gameState.groups[gameState.activeGroupIndex];
+            gameState.board[r][c] = {
+                groupIndex: gameState.activeGroupIndex,
+                word: activeGrp.word,
+                image: activeGrp.image
+            };
+
+            playSound('click');
+
+            // Check for completed 3-in-a-row lines
+            checkForCompletedLines();
+
+            // Handle Turn Switching & Timer
+            if (gameState.autoTurnSwitch) {
+                nextTurn();
+            }
+
+            renderGrid();
+            renderScoreboard();
+        }
+
+        function checkForCompletedLines() {
+            const size = gameState.gridSize;
+            const board = gameState.board;
+            let newlyScored = false;
+
+            // 1. Horizontal Check
+            if (gameState.scoreHorizontal) {
+                for (let r = 0; r < size; r++) {
+                    for (let c = 0; c <= size - 3; c++) {
+                        const cell1 = board[r][c];
+                        const cell2 = board[r][c+1];
+                        const cell3 = board[r][c+2];
+                        if (cell1 && cell2 && cell3 &&
+                            cell1.groupIndex === cell2.groupIndex &&
+                            cell2.groupIndex === cell3.groupIndex) {
+                            
+                            const lineKey = `h-${r}-${c}`;
+                            if (!gameState.scoredLines.includes(lineKey)) {
+                                gameState.scoredLines.push(lineKey);
+                                awardPoints(cell1.groupIndex);
+                                newlyScored = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. Vertical Check
+            if (gameState.scoreVertical) {
+                for (let c = 0; c < size; c++) {
+                    for (let r = 0; r <= size - 3; r++) {
+                        const cell1 = board[r][c];
+                        const cell2 = board[r+1][c];
+                        const cell3 = board[r+2][c];
+                        if (cell1 && cell2 && cell3 &&
+                            cell1.groupIndex === cell2.groupIndex &&
+                            cell2.groupIndex === cell3.groupIndex) {
+                            
+                            const lineKey = `v-${c}-${r}`;
+                            if (!gameState.scoredLines.includes(lineKey)) {
+                                gameState.scoredLines.push(lineKey);
+                                awardPoints(cell1.groupIndex);
+                                newlyScored = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Diagonal Check
+            if (gameState.scoreDiagonal) {
+                // Down-Right Diagonal (\)
+                for (let r = 0; r <= size - 3; r++) {
+                    for (let c = 0; c <= size - 3; c++) {
+                        const cell1 = board[r][c];
+                        const cell2 = board[r+1][c+1];
+                        const cell3 = board[r+2][c+2];
+                        if (cell1 && cell2 && cell3 &&
+                            cell1.groupIndex === cell2.groupIndex &&
+                            cell2.groupIndex === cell3.groupIndex) {
+                            
+                            const lineKey = `d-dr-${r}-${c}`;
+                            if (!gameState.scoredLines.includes(lineKey)) {
+                                gameState.scoredLines.push(lineKey);
+                                awardPoints(cell1.groupIndex);
+                                newlyScored = true;
+                            }
+                        }
+                    }
+                }
+                // Up-Right Diagonal (/)
+                for (let r = 2; r < size; r++) {
+                    for (let c = 0; c <= size - 3; c++) {
+                        const cell1 = board[r][c];
+                        const cell2 = board[r-1][c+1];
+                        const cell3 = board[r-2][c+2];
+                        if (cell1 && cell2 && cell3 &&
+                            cell1.groupIndex === cell2.groupIndex &&
+                            cell2.groupIndex === cell3.groupIndex) {
+                            
+                            const lineKey = `d-dl-${r}-${c}`;
+                            if (!gameState.scoredLines.includes(lineKey)) {
+                                gameState.scoredLines.push(lineKey);
+                                awardPoints(cell1.groupIndex);
+                                newlyScored = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (newlyScored) {
+                playSound('success');
+                showNotification(`+${gameState.pointsPerLine} POINT! CONNECTED LINE!`, 'emerald');
+            }
+        }
+
+        function awardPoints(groupIndex) {
+            gameState.groups[groupIndex].score += gameState.pointsPerLine;
+        }
+
+        function showNotification(text, colorType) {
+            const banner = document.getElementById('notification-banner');
+            const content = document.getElementById('notification-content');
+            content.innerText = text;
+            if (colorType === 'emerald') {
+                content.className = "bg-emerald-600 text-white font-black px-6 py-3 rounded-2xl shadow-2xl text-xl flex items-center space-x-3 border-2 border-emerald-400";
+            } else {
+                content.className = "bg-rose-600 text-white font-black px-6 py-3 rounded-2xl shadow-2xl text-xl flex items-center space-x-3 border-2 border-rose-400";
+            }
+            banner.classList.remove('opacity-0', '-translate-y-20');
+            banner.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                banner.classList.remove('opacity-100', 'translate-y-0');
+                banner.classList.add('opacity-0', '-translate-y-20');
+            }, 2500);
+        }
+
+        function nextTurn() {
+            gameState.activeGroupIndex = (gameState.activeGroupIndex + 1) % gameState.groups.length;
+            renderActiveGroupDisplay();
+            resetTimerValue();
+            startTimer();
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerRunning = true;
+            currentTime = 1;
+            updateTimerDisplay();
+
+            timerInterval = setInterval(() => {
+                currentTime++;
+                updateTimerDisplay();
+                if (currentTime >= gameState.timerDuration) {
+                    clearInterval(timerInterval);
+                    timerRunning = false;
+                    playSound('timeout');
+                    showNotification("TIME'S UP!", 'rose');
+                    if (gameState.autoTurnSwitch) {
+                        setTimeout(() => nextTurn(), 1200);
+                    }
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerRunning = false;
+        }
+
+        function resumeTimer() {
+            if (!timerRunning) {
+                timerRunning = true;
+                timerInterval = setInterval(() => {
+                    currentTime++;
+                    updateTimerDisplay();
+                    if (currentTime >= gameState.timerDuration) {
+                        clearInterval(timerInterval);
+                        timerRunning = false;
+                        playSound('timeout');
+                        showNotification("TIME'S UP!", 'rose');
+                        if (gameState.autoTurnSwitch) {
+                            setTimeout(() => nextTurn(), 1200);
+                        }
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimerValue() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerRunning = false;
+            currentTime = 0;
+            updateTimerDisplay();
+        }
+
+        function updateTimerDisplay() {
+            document.getElementById('timer-display').innerText = `${currentTime}s`;
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            syncSettingsToUI();
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function syncSettingsToUI() {
+            document.getElementById('setting-num-groups').value = gameState.groups.length;
+            document.getElementById('setting-grid-size').value = gameState.gridSize;
+            document.getElementById('setting-points-per-line').value = gameState.pointsPerLine;
+            document.getElementById('setting-score-horizontal').checked = gameState.scoreHorizontal;
+            document.getElementById('setting-score-vertical').checked = gameState.scoreVertical;
+            document.getElementById('setting-score-diagonal').checked = gameState.scoreDiagonal;
+            document.getElementById('setting-global-image-display').checked = gameState.showImages;
+            document.getElementById('setting-global-word-display').checked = gameState.showWords;
+            document.getElementById('setting-question').value = gameState.question;
+            document.getElementById('setting-answer-prefix').value = gameState.answerPrefix;
+            document.getElementById('setting-instruction').value = gameState.instruction;
+            document.getElementById('setting-timer-duration').value = gameState.timerDuration;
+            document.getElementById('setting-auto-turn-switch').checked = gameState.autoTurnSwitch;
+
+            renderSettingsModalGroups();
+        }
+
+        function renderSettingsModalGroups() {
+            const container = document.getElementById('group-settings-list');
+            container.innerHTML = '';
+            gameState.groups.forEach((grp, idx) => {
+                const item = document.createElement('div');
+                item.className = "bg-slate-900/80 border border-slate-700 p-4 rounded-2xl space-y-3";
+                item.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <input type="color" value="${grp.color}" data-group-idx="${idx}" class="group-color-input w-8 h-8 rounded-lg bg-transparent cursor-pointer">
+                            <span class="text-sm font-bold text-white">Group ${idx + 1}</span>
+                        </div>
+                        <span class="text-xs text-slate-400">Score: ${grp.score}</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Group Name</label>
+                            <input type="text" value="${grp.name}" data-group-idx="${idx}" class="group-name-input w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Assigned Word</label>
+                            <input type="text" value="${grp.word}" data-group-idx="${idx}" class="group-word-input w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 pt-1">
+                        <img src="${grp.image}" class="w-12 h-12 rounded-xl object-cover border border-slate-600 shrink-0" onerror="this.src='https://placehold.co/100x100/334155/ffffff?text=Img'">
+                        <div class="flex-1 flex flex-wrap gap-2 items-center">
+                            <label class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition border border-slate-600">
+                                <span>Upload Image</span>
+                                <input type="file" accept="image/*" data-group-idx="${idx}" class="group-image-upload-input hidden">
+                            </label>
+                            <button type="button" data-group-idx="${idx}" class="group-remove-image-btn bg-slate-800 hover:bg-rose-900/50 text-rose-400 px-3 py-1.5 rounded-xl text-xs font-semibold transition border border-slate-700">Remove Image</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            // Bind group inputs events
+            container.querySelectorAll('.group-name-input').forEach(input => {
+                input.oninput = (e) => { gameState.groups[e.target.dataset.groupIdx].name = e.target.value; };
+            });
+            container.querySelectorAll('.group-word-input').forEach(input => {
+                input.oninput = (e) => { gameState.groups[e.target.dataset.groupIdx].word = e.target.value; };
+            });
+            container.querySelectorAll('.group-color-input').forEach(input => {
+                input.oninput = (e) => { gameState.groups[e.target.dataset.groupIdx].color = e.target.value; };
+            });
+            container.querySelectorAll('.group-image-upload-input').forEach(input => {
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const idx = e.target.dataset.groupIdx;
+                            gameState.groups[idx].image = event.target.result;
+                            if (!gameState.imageLibrary.includes(event.target.result)) {
+                                gameState.imageLibrary.push(event.target.result);
+                            }
+                            renderSettingsModalGroups();
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+            });
+            container.querySelectorAll('.group-remove-image-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    const idx = e.target.dataset.groupIdx;
+                    gameState.groups[idx].image = '';
+                    renderSettingsModalGroups();
+                };
+            });
+        }
+
+        function renderImageLibrary() {
+            const container = document.getElementById('image-library-grid');
+            container.innerHTML = '';
+            gameState.imageLibrary.forEach((imgUrl, idx) => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-800 border border-slate-700 p-2.5 rounded-2xl flex flex-col items-center space-y-2 relative group";
+                card.innerHTML = `
+                    <img src="${imgUrl}" class="w-20 h-20 rounded-xl object-cover border border-slate-600" onerror="this.src='https://placehold.co/100x100/334155/ffffff?text=Img'">
+                    <div class="flex space-x-1 w-full">
+                        <button type="button" data-url="${imgUrl}" class="lib-delete-btn flex-1 bg-rose-900/40 hover:bg-rose-900 text-rose-300 py-1 rounded-lg text-[10px] font-bold transition">Delete</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            container.querySelectorAll('.lib-delete-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    const url = e.target.dataset.url;
+                    gameState.imageLibrary = gameState.imageLibrary.filter(u => u !== url);
+                    renderImageLibrary();
+                };
+            });
+        }
+
+        function applySettingsFromUI() {
+            gameState.numGroups = parseInt(document.getElementById('setting-num-groups').value);
+            gameState.gridSize = parseInt(document.getElementById('setting-grid-size').value);
+            gameState.pointsPerLine = parseInt(document.getElementById('setting-points-per-line').value);
+            gameState.scoreHorizontal = document.getElementById('setting-score-horizontal').checked;
+            gameState.scoreVertical = document.getElementById('setting-score-vertical').checked;
+            gameState.scoreDiagonal = document.getElementById('setting-score-diagonal').checked;
+            gameState.showImages = document.getElementById('setting-global-image-display').checked;
+            gameState.showWords = document.getElementById('setting-global-word-display').checked;
+            gameState.question = document.getElementById('setting-question').value;
+            gameState.answerPrefix = document.getElementById('setting-answer-prefix').value;
+            gameState.instruction = document.getElementById('setting-instruction').value;
+            gameState.timerDuration = parseInt(document.getElementById('setting-timer-duration').value);
+            gameState.autoTurnSwitch = document.getElementById('setting-auto-turn-switch').checked;
+
+            // Adjust groups length
+            if (gameState.groups.length < gameState.numGroups) {
+                const colors = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#9333ea", "#0ea5e9"];
+                while (gameState.groups.length < gameState.numGroups) {
+                    const idx = gameState.groups.length;
+                    gameState.groups.push({
+                        name: `Group ${idx + 1}`,
+                        word: `Word ${idx + 1}`,
+                        image: gameState.imageLibrary[0] || "https://placehold.co/150x150/334155/ffffff?text=Item",
+                        color: colors[idx % colors.length],
+                        score: 0
+                    });
+                }
+            } else if (gameState.groups.length > gameState.numGroups) {
+                gameState.groups = gameState.groups.slice(0, gameState.numGroups);
+            }
+
+            if (gameState.activeGroupIndex >= gameState.groups.length) {
+                gameState.activeGroupIndex = 0;
+            }
+
+            initBoard();
+            renderApp();
+            closeSettingsModal();
+        }
+
+        function openPresetsModal() {
+            document.getElementById('presets-modal').classList.remove('hidden');
+            renderPresetsList();
+        }
+
+        function closePresetsModal() {
+            document.getElementById('presets-modal').classList.add('hidden');
+        }
+
+        function renderPresetsList() {
+            const container = document.getElementById('presets-grid-container');
+            container.innerHTML = '';
+            DEFAULT_PRESETS.forEach(preset => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-700 p-4 rounded-2xl flex flex-col justify-between space-y-3 hover:border-indigo-500 transition cursor-pointer";
+                card.innerHTML = `
+                    <div>
+                        <h4 class="text-base font-bold text-white">${preset.name}</h4>
+                        <p class="text-xs text-slate-400 mt-1">Q: "${preset.question}"</p>
+                        <div class="flex flex-wrap gap-1 mt-2">
+                            ${preset.groups.map(g => `<span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md">${g.word}</span>`).join('')}
+                        </div>
+                    </div>
+                    <button class="load-preset-btn bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-3 rounded-xl text-xs transition shadow-md w-full">
+                        Load Preset
+                    </button>
+                `;
+                card.querySelector('.load-preset-btn').onclick = () => {
+                    loadPreset(preset);
+                    closePresetsModal();
+                };
+                container.appendChild(card);
+            });
+        }
+
+        function loadPreset(preset) {
+            gameState.question = preset.question;
+            gameState.answerPrefix = preset.answerPrefix;
+            gameState.instruction = preset.instruction;
+            gameState.gridSize = preset.gridSize;
+            gameState.pointsPerLine = preset.pointsPerLine;
+            gameState.timerDuration = preset.timerDuration;
+            gameState.numGroups = preset.groups.length;
+            gameState.groups = JSON.parse(JSON.stringify(preset.groups)).map(g => ({ ...g, score: 0 }));
+            gameState.activeGroupIndex = 0;
+            initBoard();
+            renderApp();
+        }
+
+        window.onload = () => {
+            initBoard();
+            renderApp();
+
+            // Modal Tabs Navigation
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    document.querySelectorAll('.tab-btn').forEach(b => {
+                        b.classList.remove('border-indigo-500', 'text-indigo-400');
+                        b.classList.add('border-transparent', 'text-slate-400');
+                    });
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+
+                    e.target.classList.remove('border-transparent', 'text-slate-400');
+                    e.target.classList.add('border-indigo-500', 'text-indigo-400');
+                    document.getElementById(e.target.dataset.tab).classList.remove('hidden');
+                };
+            });
+
+            // Header & Control Buttons
+            document.getElementById('btn-settings').onclick = openSettingsModal;
+            document.getElementById('btn-close-settings').onclick = closeSettingsModal;
+            document.getElementById('btn-cancel-settings').onclick = closeSettingsModal;
+            document.getElementById('btn-save-settings').onclick = applySettingsFromUI;
+
+            document.getElementById('btn-presets').onclick = openPresetsModal;
+            document.getElementById('btn-close-presets').onclick = closePresetsModal;
+
+            document.getElementById('btn-fullscreen').onclick = () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            };
+
+            // Timer Buttons
+            document.getElementById('timer-start').onclick = startTimer;
+            document.getElementById('timer-pause').onclick = pauseTimer;
+            document.getElementById('timer-resume').onclick = resumeTimer;
+            document.getElementById('timer-reset').onclick = resetTimerValue;
+
+            // Quick Actions
+            document.getElementById('quick-reset-board').onclick = () => {
+                if (confirm("Clear the entire game board?")) {
+                    initBoard();
+                    renderGrid();
+                }
+            };
+            document.getElementById('quick-reset-scores').onclick = () => {
+                if (confirm("Reset all team scores to zero?")) {
+                    gameState.groups.forEach(g => g.score = 0);
+                    renderScoreboard();
+                }
+            };
+            document.getElementById('quick-new-game').onclick = () => {
+                if (confirm("Start a completely new game?")) {
+                    initBoard();
+                    gameState.groups.forEach(g => g.score = 0);
+                    gameState.activeGroupIndex = 0;
+                    resetTimerValue();
+                    renderApp();
+                }
+            };
+
+            document.getElementById('btn-reset-everything').onclick = () => {
+                if (confirm("Reset everything to default weather lesson?")) {
+                    loadPreset(DEFAULT_PRESETS[0]);
+                    closeSettingsModal();
+                }
+            };
+
+            // Image Library File Input Upload
+            document.getElementById('library-file-input').onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        gameState.imageLibrary.push(event.target.result);
+                        renderImageLibrary();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            // Save current state as preset
+            document.getElementById('btn-save-current-preset').onclick = () => {
+                const presetName = prompt("Enter a name for this lesson preset:", "Custom Lesson");
+                if (presetName) {
+                    const newPreset = {
+                        id: 'custom_' + Date.now(),
+                        name: presetName,
+                        question: gameState.question,
+                        answerPrefix: gameState.answerPrefix,
+                        instruction: gameState.instruction,
+                        groups: JSON.parse(JSON.stringify(gameState.groups)),
+                        gridSize: gameState.gridSize,
+                        pointsPerLine: gameState.pointsPerLine,
+                        timerDuration: gameState.timerDuration
+                    };
+                    DEFAULT_PRESETS.push(newPreset);
+                    renderPresetsList();
+                    alert("Preset saved successfully!");
+                }
+            };
+        };
+    </script>
+</body>
+</html>
